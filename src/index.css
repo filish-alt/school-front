@@ -131,4 +131,12 @@
   .sidebar-glow {
     box-shadow: 1px 0 20px -5px hsl(var(--secondary) / 0.15);
   }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }

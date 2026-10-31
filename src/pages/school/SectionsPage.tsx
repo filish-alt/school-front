@@ -17,7 +17,11 @@ import { Edit, Trash2, BookOpen, GraduationCap, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
+import { useAuth } from '@/contexts/AuthContext';
+
 export default function SectionsPage() {
+  const { user } = useAuth();
+  const canManage = ['super_admin', 'school_admin', 'school_director', 'vice_director'].includes(user?.role || '');
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -67,7 +71,12 @@ export default function SectionsPage() {
 
   return (
     <AnimatedPage>
-      <PageHeader title="Sections" description="Manage class sections" onAdd={() => { setEditing(null); setForm({ name: '', grade_level: '', academic_year: '' }); setDialogOpen(true); }} addLabel="Add Section">
+      <PageHeader
+        title="Sections"
+        description={canManage ? "Manage class sections" : "View class sections"}
+        onAdd={canManage ? () => { setEditing(null); setForm({ name: '', grade_level: '', academic_year: '' }); setDialogOpen(true); } : undefined}
+        addLabel="Add Section"
+      >
         <ViewToggle view={view} onChange={setView} />
       </PageHeader>
       <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search sections..." />
@@ -77,7 +86,7 @@ export default function SectionsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">{[1,2,3].map(i => <GridCardSkeleton key={i} />)}</div>
         ) : <TableSkeleton cols={3} />
       ) : filtered.length === 0 ? (
-        <EmptyState icon={BookOpen} title="No sections" description="Create your first section." />
+        <EmptyState icon={BookOpen} title="No sections" description={canManage ? "Create your first section." : "No sections found."} />
       ) : view === 'grid' ? (
         <motion.div
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
@@ -105,23 +114,25 @@ export default function SectionsPage() {
                   <Badge variant="secondary" className="gap-1"><Calendar className="w-3 h-3" /> {unwrapString(item.academic_year)}</Badge>
                 )}
               </div>
-              <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border/50">
-                <Button variant="ghost" size="sm" className="flex-1 gap-1.5" onClick={() => { setEditing(item); setForm({ name: item.name, grade_level: unwrapString(item.grade_level), academic_year: unwrapString(item.academic_year) }); setDialogOpen(true); }}>
-                  <Edit className="w-3.5 h-3.5" /> Edit
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-              </div>
+              {canManage && (
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border/50">
+                  <Button variant="ghost" size="sm" className="flex-1 gap-1.5" onClick={() => { setEditing(item); setForm({ name: item.name, grade_level: unwrapString(item.grade_level), academic_year: unwrapString(item.academic_year) }); setDialogOpen(true); }}>
+                    <Edit className="w-3.5 h-3.5" /> Edit
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                </div>
+              )}
             </motion.div>
           ))}
         </motion.div>
       ) : (
         <DataTable columns={columns} data={filtered} isLoading={false} page={page} onPageChange={setPage}
-          actions={(item) => (
+          actions={canManage ? (item) => (
             <div className="flex items-center gap-1 justify-end">
               <Button variant="ghost" size="icon" onClick={() => { setEditing(item); setForm({ name: item.name, grade_level: unwrapString(item.grade_level), academic_year: unwrapString(item.academic_year) }); setDialogOpen(true); }}><Edit className="w-4 h-4" /></Button>
               <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
             </div>
-          )}
+          ) : undefined}
         />
       )}
 

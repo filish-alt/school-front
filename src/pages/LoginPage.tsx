@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import studentsExamImg from '@/components/assets/students-exam.png';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { GraduationCap, Loader2, Eye, EyeOff, BookOpen, PenTool, BarChart3 } from 'lucide-react';
+import { GraduationCap, Loader2, Eye, EyeOff, BookOpen, PenTool, BarChart3, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
@@ -16,7 +18,9 @@ const floatingIcons = [
 ];
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const { login } = useAuth();
+  const { t, language, setLanguage } = useLanguage();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,21 +29,60 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
-      toast.error('Please fill in all fields');
+      toast.error(t('fill_all_fields'));
       return;
     }
     setLoading(true);
     try {
       await login(username, password);
     } catch (err: any) {
-      toast.error(err.message || 'Login failed');
+      toast.error(err.message || t('login_failed'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-background flex flex-col lg:flex-row relative">
+      {/* Top right language switcher */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate('/')}
+          className="text-xs text-muted-foreground hover:text-foreground hidden sm:flex items-center gap-1"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>{t('back_to_home')}</span>
+        </Button>
+        <div className="flex items-center bg-card/80 backdrop-blur-md rounded-lg p-0.5 border border-border shadow-sm">
+          <button
+            type="button"
+            onClick={() => setLanguage('am')}
+            className={`px-2 py-1 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${
+              language === 'am'
+                ? 'bg-primary text-primary-foreground shadow-sm font-semibold'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <span>🇪🇹</span>
+            <span>አማ</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLanguage('en')}
+            className={`px-2 py-1 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${
+              language === 'en'
+                ? 'bg-primary text-primary-foreground shadow-sm font-semibold'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <span>🇬🇧</span>
+            <span>EN</span>
+          </button>
+        </div>
+      </div>
+
       {/* Left/Top decorative panel */}
       <div className="w-full lg:w-1/2 bg-primary relative overflow-hidden flex items-center justify-center py-10 lg:py-0 min-h-[280px] lg:min-h-screen">
         {/* Animated gradient background */}
@@ -95,27 +138,16 @@ export default function LoginPage() {
           <motion.img
             src={studentsExamImg}
             alt="Students taking an exam"
-            className="w-[260px] lg:w-[420px] max-w-full mb-4 lg:mb-8 drop-shadow-2xl"
+            className="w-[240px] lg:w-[400px] max-w-full mb-4 lg:mb-8 drop-shadow-2xl"
             animate={{ y: [0, -10, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           />
           <h2 className="text-2xl lg:text-4xl font-heading font-bold text-primary-foreground mb-2 lg:mb-4">ExamPrep</h2>
-          <p className="text-primary-foreground/70 text-sm lg:text-lg max-w-md hidden sm:block">
-            A comprehensive exam preparation platform for schools, universities, and training institutions.
+          <p className="text-primary-foreground/80 text-sm lg:text-base max-w-md hidden sm:block leading-relaxed">
+            {language === 'am'
+              ? 'ለትምህርት ቤቶችና ለከፍተኛ ተቋማት የተዘጋጀ የተሟላና አስተማማኝ የፈተና አስተዳደር ሥርዓት።'
+              : 'A comprehensive exam preparation and assessment platform for modern educational institutions.'}
           </p>
-          <div className="mt-4 lg:mt-8 flex flex-wrap justify-center gap-2 lg:gap-3 hidden sm:flex">
-            {['Question Banks', 'Timed Exams', 'Analytics', 'Multi-Tenant'].map((label, i) => (
-              <motion.span
-                key={label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 + i * 0.15 }}
-                className="px-3 lg:px-4 py-1 lg:py-1.5 rounded-full bg-accent/10 text-accent text-xs lg:text-sm font-medium border border-accent/15"
-              >
-                {label}
-              </motion.span>
-            ))}
-          </div>
         </motion.div>
       </div>
 
@@ -132,15 +164,15 @@ export default function LoginPage() {
             transition={{ delay: 0.1 }}
             className="text-2xl font-heading font-bold text-foreground mb-2"
           >
-            Welcome back
+            {t('welcome_back')}
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-muted-foreground mb-8"
+            className="text-muted-foreground mb-8 text-sm"
           >
-            Sign in to your account to continue
+            {t('sign_in_continue')}
           </motion.p>
 
           <motion.form
@@ -151,24 +183,24 @@ export default function LoginPage() {
             transition={{ delay: 0.3 }}
           >
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">{t('username_label')}</Label>
               <Input
                 id="username"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                placeholder="Enter your username"
+                placeholder={t('enter_username')}
                 autoComplete="username"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('password_label')}</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPw ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder={t('enter_password')}
                   autoComplete="current-password"
                 />
                 <button
@@ -180,9 +212,9 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full shadow-md shadow-primary/20" disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Sign In
+              {t('sign_in_btn')}
             </Button>
           </motion.form>
         </motion.div>

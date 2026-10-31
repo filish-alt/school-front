@@ -15,9 +15,43 @@ interface NullableTime {
   Valid: boolean;
 }
 
-export const unwrapString = (v: NullableString | undefined): string => v?.Valid ? v.String : '';
-export const unwrapInt = (v: NullableInt | undefined): number => v?.Valid ? v.Int64 : 0;
-export const unwrapTime = (v: NullableTime | undefined): string => v?.Valid ? v.Time : '';
+export const unwrapString = (v: any): string => {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  if (typeof v === 'object') {
+    if ('Valid' in v) {
+      return v.Valid ? String(v.String ?? '') : '';
+    }
+    if ('String' in v) return String(v.String ?? '');
+  }
+  return '';
+};
+
+export const unwrapInt = (v: any): number => {
+  if (v === null || v === undefined) return 0;
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string') return Number(v) || 0;
+  if (typeof v === 'object') {
+    if ('Valid' in v) {
+      return v.Valid ? Number(v.Int64 ?? 0) : 0;
+    }
+    if ('Int64' in v) return Number(v.Int64 ?? 0);
+  }
+  return 0;
+};
+
+export const unwrapTime = (v: any): string => {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'object') {
+    if ('Valid' in v) {
+      return v.Valid ? String(v.Time ?? '') : '';
+    }
+    if ('Time' in v) return String(v.Time ?? '');
+  }
+  return '';
+};
 
 function getToken(): string | null {
   return localStorage.getItem('auth_token');
@@ -107,7 +141,7 @@ export const api = {
     request<any>(`/api/v1/superadmin/tenants/${id}/deactivate`, { method: 'POST' }),
 
   // Super Admin - Students
-  getStudentsSuperAdmin: (tenantId: string, page = 1, pageSize = 20) =>
+  getStudentsSuperAdmin: (tenantId: string, page = 1, pageSize = 100) =>
     request<any[]>(`/api/v1/superadmin/students?tenant_id=${tenantId}&page=${page}&page_size=${pageSize}`),
   createStudentSuperAdmin: (data: { tenant_id: string; student_code: string; first_name: string; last_name: string; email: string; section_id?: string; department_id?: string }) =>
     request<{ student_id: string; username: string; password: string }>('/api/v1/superadmin/students', {
@@ -174,14 +208,14 @@ export const api = {
   deleteSubject: (id: string) =>
     request<any>(`/api/v1/school/subjects/${id}`, { method: 'DELETE' }),
 
-  // School Admin - Teachers
+  // School Admin - Teachers & Staff
   getTeachers: (page = 1, pageSize = 20) =>
     request<any[]>(`/api/v1/school/teachers?page=${page}&page_size=${pageSize}`),
-  createTeacher: (data: { first_name: string; last_name: string; email: string; teacher_code?: string }) =>
-    request<{ teacher_id: string; username: string; password: string }>('/api/v1/school/teachers', {
+  createTeacher: (data: { first_name: string; last_name: string; email: string; teacher_code?: string; role_name?: string; department_id?: string }) =>
+    request<{ teacher_id: string; username: string; password: string; role_name?: string }>('/api/v1/school/teachers', {
       method: 'POST', body: JSON.stringify(data),
     }),
-  updateTeacher: (data: { id: string; first_name?: string; last_name?: string }) =>
+  updateTeacher: (data: { id: string; first_name?: string; last_name?: string; role_name?: string; department_id?: string }) =>
     request<any>('/api/v1/school/teachers', {
       method: 'PATCH', body: JSON.stringify(data),
     }),
@@ -219,6 +253,13 @@ export const api = {
     request<{ id: string }>('/api/v1/teacher/questions', {
       method: 'POST', body: JSON.stringify(data),
     }),
+  uploadImage: (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return request<{ url: string }>('/api/v1/school/upload', {
+      method: 'POST', body: formData,
+    });
+  },
   uploadQuestionImage: (file: File) => {
     const formData = new FormData();
     formData.append('image', file);
@@ -332,4 +373,136 @@ export const api = {
     }),
   getSession: (sessionId: string) =>
     request<any>(`/api/v1/student/sessions/${sessionId}`),
+
+  // Super Admin & School - Academic Years & Settings
+  getAcademicYears: (tenantId?: string) => {
+    const token = getToken();
+    const claims = parseJwt(token || '');
+    const role = claims?.role;
+    if (role && role !== 'super_admin') {
+      return request<any[]>('/api/v1/school/academic-years');
+    }
+    return request<any[]>(`/api/v1/superadmin/academic-years${tenantId ? `?tenant_id=${tenantId}` : ''}`);
+  },
+  createAcademicYear: (data: { tenant_id?: string; year_name: string; start_date?: string; end_date?: string }) =>
+    request<{ id: string }>('/api/v1/superadmin/academic-years', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+  setActiveAcademicYear: (id: string) =>
+    request<any>(`/api/v1/superadmin/academic-years/${id}/activate`, { method: 'POST' }),
+  deleteAcademicYear: (id: string) =>
+    request<any>(`/api/v1/superadmin/academic-years/${id}`, { method: 'DELETE' }),
+
+  getSystemSettings: () => {
+    return request<any[]>('/api/v1/settings');
+  },
+  saveSystemSetting: (data: { key: string; value: string }) => {
+    return request<any>('/api/v1/settings', {
+      method: 'POST', body: JSON.stringify(data),
+    });
+  },
+
+  // Super Admin - Audit Logs & Backups
+  getAuditLogs: (page = 1, pageSize = 50) =>
+    request<any[]>(`/api/v1/superadmin/audit-logs?page=${page}&page_size=${pageSize}`),
+  createBackup: () =>
+    request<{ status: string; path: string }>('/api/v1/superadmin/backups', { method: 'POST' }),
+  getBackups: () =>
+    request<any[]>('/api/v1/superadmin/backups'),
+
+  // School - Timetables & Schedules
+  createSchedule: (data: { teacher_id: string; subject_id?: string; section_id?: string; day_of_week: string; start_time: string; end_time: string; room?: string; activity_type?: string }) =>
+    request<{ id: string }>('/api/v1/school/schedules', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+  getTeacherSchedules: (teacherId: string) =>
+    request<any[]>(`/api/v1/school/schedules/teacher/${teacherId}`),
+  getSectionSchedules: (sectionId: string) =>
+    request<any[]>(`/api/v1/school/schedules/section/${sectionId}`),
+  deleteSchedule: (id: string) =>
+    request<any>(`/api/v1/school/schedules/${id}`, { method: 'DELETE' }),
+
+  // School - Results & Transfer Sheet
+  calculateResults: (data: { section_id: string; subject_id: string; academic_year_id?: string }) =>
+    request<any>('/api/v1/school/results/calculate', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+  getTransferSheet: (sectionId: string) =>
+    request<any[]>(`/api/v1/school/results/transfer-sheet/${sectionId}`),
+
+  // School - Complaints
+  getSchoolComplaints: (status?: string) =>
+    request<any[]>(`/api/v1/school/complaints${status ? `?status=${status}` : ''}`),
+  resolveComplaint: (id: string, data: { status: string; response: string }) =>
+    request<any>(`/api/v1/school/complaints/${id}/resolve`, {
+      method: 'PATCH', body: JSON.stringify(data),
+    }),
+
+  // Teacher - Coursework (Continuous Assessment)
+  createCoursework: (data: { subject_id: string; section_id: string; title: string; type: string; max_marks: number; weight_percentage: number; due_date?: string; academic_year_id?: string }) =>
+    request<{ id: string }>('/api/v1/teacher/coursework', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+  getMyCoursework: () =>
+    request<any[]>('/api/v1/teacher/my-coursework'),
+  getCourseworkBySectionSubject: (sectionId: string, subjectId: string) =>
+    request<any[]>(`/api/v1/teacher/coursework?section_id=${sectionId}&subject_id=${subjectId}`),
+  saveCourseworkMark: (data: { coursework_id: string; student_id: string; marks_obtained: number; remarks?: string }) =>
+    request<any>('/api/v1/teacher/coursework/marks', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+  getCourseworkMarks: (courseworkId: string) =>
+    request<any[]>(`/api/v1/teacher/coursework/${courseworkId}/marks`),
+
+  // Teacher - Live Controls & Security
+  updateExamControls: (examId: string, data: { is_started?: boolean; is_visible?: boolean; is_locked?: boolean; status?: string; approval_status?: string; access_code?: string }) =>
+    request<any>(`/api/v1/teacher/exams/${examId}/controls`, {
+      method: 'PATCH', body: JSON.stringify(data),
+    }),
+  addExamExtension: (data: { exam_id: string; student_id?: string; extended_minutes: number; reason: string }) =>
+    request<any>('/api/v1/teacher/exams/extensions', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+  getExamExtensions: (examId: string) =>
+    request<any[]>(`/api/v1/teacher/exams/${examId}/extensions`),
+  addRemoteAuthorization: (data: { exam_id: string; student_id: string; valid_until: string; reason: string }) =>
+    request<any>('/api/v1/teacher/exams/remote-authorizations', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+  getRemoteAuthorizations: (examId: string) =>
+    request<any[]>(`/api/v1/teacher/exams/${examId}/remote-authorizations`),
+  dropExamQuestion: (data: { exam_id: string; question_id: string; reason: string; credit_type?: string }) =>
+    request<any>('/api/v1/teacher/exams/drop-question', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+  correctAnswerKey: (data: { exam_id: string; question_id: string; old_answer?: string; new_answer: string; reason: string }) =>
+    request<any>('/api/v1/teacher/exams/correct-key', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+  getEmergencyExamPackage: (examId: string) =>
+    request<any>(`/api/v1/teacher/exams/${examId}/emergency-package`),
+  getMySchedule: () =>
+    request<any[]>('/api/v1/teacher/my-schedule'),
+
+  // Matching Pairs
+  setMatchPairs: (questionId: string, pairs: { left_prompt: string; right_match: string; order_index?: number }[]) =>
+    request<any>(`/api/v1/teacher/questions/${questionId}/match-pairs`, {
+      method: 'POST', body: JSON.stringify(pairs),
+    }),
+  getMatchPairs: (questionId: string) =>
+    request<any[]>(`/api/v1/teacher/questions/${questionId}/match-pairs`),
+
+  // Student - Marks & Results
+  getMyMarks: () =>
+    request<any[]>('/api/v1/student/my-marks'),
+  getMyResults: () =>
+    request<any[]>('/api/v1/student/my-results'),
+
+  // Student - Complaints
+  createComplaint: (data: { subject_id?: string; exam_id?: string; coursework_id?: string; question_id?: string; category: string; description: string }) =>
+    request<{ id: string }>('/api/v1/student/complaints', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+  getMyComplaints: () =>
+    request<any[]>('/api/v1/student/my-complaints'),
 };

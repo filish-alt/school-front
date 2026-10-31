@@ -1,184 +1,199 @@
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useState } from 'react';
-import { api } from '@/lib/api';
 import {
-  Building2, Users, GraduationCap, BookOpen, Layers, UserCog,
-  LayoutDashboard, LogOut, Sun, Moon, ClipboardList, FileQuestion, School, ShieldAlert, KeyRound, Trophy
+  Building2, GraduationCap, BookOpen, Layers, UserCog,
+  LayoutDashboard, ClipboardList, FileQuestion, School, ShieldAlert,
+  Calendar, Sliders, ShieldCheck, Database, FileSpreadsheet, MessageSquare, Award,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 interface NavItem {
+  key: string;
   label: string;
   icon: React.ElementType;
   path: string;
 }
 
+const schoolLeadershipNav: NavItem[] = [
+  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+  { key: 'students_nav', label: 'Students', icon: GraduationCap, path: '/sa-students' },
+  { key: 'settings_nav', label: 'Assessment & Grading', icon: Sliders, path: '/settings' },
+  { key: 'transfer_sheets_nav', label: 'Transfer Sheets', icon: FileSpreadsheet, path: '/transfer-sheets' },
+  { key: 'final_approvals_nav', label: 'Exam Approvals', icon: ShieldCheck, path: '/final-approvals' },
+  { key: 'complaints_nav', label: 'Complaints', icon: MessageSquare, path: '/complaints' },
+  { key: 'departments_nav', label: 'Departments', icon: Layers, path: '/departments' },
+  { key: 'sections_nav', label: 'Sections', icon: BookOpen, path: '/sections' },
+  { key: 'subjects_nav', label: 'Subjects', icon: ClipboardList, path: '/subjects' },
+  { key: 'teachers_nav', label: 'Staff & Teachers', icon: UserCog, path: '/teachers' },
+  { key: 'assignments_nav', label: 'Assignments', icon: School, path: '/assignments' },
+  { key: 'violations_nav', label: 'Violations', icon: ShieldAlert, path: '/violations' },
+];
+
 const navByRole: Record<UserRole, NavItem[]> = {
   super_admin: [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { label: 'Tenants', icon: Building2, path: '/tenants' },
-    { label: 'Students', icon: GraduationCap, path: '/sa-students' },
+    { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { key: 'tenants_nav', label: 'Tenants', icon: Building2, path: '/tenants' },
+    { key: 'teachers_nav', label: 'Staff & Teachers', icon: UserCog, path: '/teachers' },
+    { key: 'students_nav', label: 'Students', icon: GraduationCap, path: '/sa-students' },
+    { key: 'academic_years_nav', label: 'Academic Years', icon: Calendar, path: '/academic-years' },
+    { key: 'settings_nav', label: 'System Settings', icon: Sliders, path: '/settings' },
+    { key: 'audit_logs_nav', label: 'Audit Logs', icon: ShieldCheck, path: '/audit-logs' },
+    { key: 'backups_nav', label: 'Backups', icon: Database, path: '/backups' },
   ],
-  school_admin: [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { label: 'Departments', icon: Layers, path: '/departments' },
-    { label: 'Sections', icon: BookOpen, path: '/sections' },
-    { label: 'Subjects', icon: ClipboardList, path: '/subjects' },
-    { label: 'Teachers', icon: UserCog, path: '/teachers' },
-    { label: 'Assignments', icon: School, path: '/assignments' },
-    { label: 'Violations', icon: ShieldAlert, path: '/violations' },
+  school_admin: schoolLeadershipNav,
+  school_director: schoolLeadershipNav,
+  vice_director: schoolLeadershipNav,
+  department_head: [
+    { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { key: 'assignments_nav', label: 'Teacher Assignments', icon: School, path: '/assignments' },
+    { key: 'question_banks_nav', label: 'Question Banks', icon: FileQuestion, path: '/question-banks' },
+    { key: 'exams_nav', label: 'Exams', icon: ClipboardList, path: '/exams' },
+    { key: 'final_approvals_nav', label: 'Exam Approvals', icon: ShieldCheck, path: '/final-approvals' },
+    { key: 'complaints_nav', label: 'Complaints', icon: MessageSquare, path: '/complaints' },
+    { key: 'coursework_nav', label: 'Coursework (CA)', icon: Award, path: '/coursework' },
+    { key: 'transfer_sheets_nav', label: 'Transfer Sheets', icon: FileSpreadsheet, path: '/transfer-sheets' },
+    { key: 'my_students_nav', label: 'Students', icon: GraduationCap, path: '/t-students' },
+    { key: 'sections_nav', label: 'Sections (View)', icon: BookOpen, path: '/sections' },
+    { key: 'subjects_nav', label: 'Subjects (View)', icon: ClipboardList, path: '/subjects' },
   ],
   teacher: [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { label: 'Question Banks', icon: FileQuestion, path: '/question-banks' },
-    { label: 'Exams', icon: ClipboardList, path: '/exams' },
-    { label: 'Students', icon: GraduationCap, path: '/t-students' },
+    { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { key: 'coursework_nav', label: 'Coursework (CA)', icon: Award, path: '/coursework' },
+    { key: 'question_banks_nav', label: 'Question Banks', icon: FileQuestion, path: '/question-banks' },
+    { key: 'exams_nav', label: 'Exams', icon: ClipboardList, path: '/exams' },
+    { key: 'transfer_sheets_nav', label: 'Transfer Sheets', icon: FileSpreadsheet, path: '/transfer-sheets' },
+    { key: 'my_students_nav', label: 'Students', icon: GraduationCap, path: '/t-students' },
   ],
   student: [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { label: 'My Exams', icon: ClipboardList, path: '/my-exams' },
-    { label: 'My Results', icon: Trophy, path: '/my-results' },
+    { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { key: 'my_exams_nav', label: 'My Exams', icon: ClipboardList, path: '/my-exams' },
+    { key: 'my_results_nav', label: 'My Results', icon: TrophyIcon, path: '/my-results' },
+    { key: 'my_complaints_nav', label: 'Inquiries & Complaints', icon: MessageSquare, path: '/my-complaints' },
   ],
 };
 
-export default function AppSidebar() {
-  const { user, logout } = useAuth();
-  const { isDark, toggle } = useTheme();
+function TrophyIcon(props: any) {
+  return <Award {...props} />;
+}
+
+interface AppSidebarProps {
+  open?: boolean;
+  onClose?: () => void;
+  onOpenSettings?: (tab?: 'profile' | 'appearance' | 'security') => void;
+}
+
+export default function AppSidebar({ open = false, onClose, onOpenSettings }: AppSidebarProps) {
+  const { user } = useAuth();
+  const { branding } = useTheme();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [pwOpen, setPwOpen] = useState(false);
-  const [oldPw, setOldPw] = useState('');
-  const [newPw, setNewPw] = useState('');
-  const [changingPw, setChangingPw] = useState(false);
+  // Close sidebar on mobile when route changes
+  useEffect(() => {
+    if (onClose) {
+      onClose();
+    }
+  }, [location.pathname]);
 
   if (!user) return null;
 
   const items = navByRole[user.role] || [];
-
-  const handleChangePassword = async () => {
-    if (!oldPw || !newPw) { toast.error('Please fill both fields'); return; }
-    setChangingPw(true);
-    try {
-      await api.changePassword(oldPw, newPw);
-      toast.success('Password changed successfully');
-      setPwOpen(false);
-      setOldPw('');
-      setNewPw('');
-    } catch (e: any) { toast.error(e.message || 'Failed to change password'); }
-    setChangingPw(false);
-  };
+  const roleLabel = t(`role_${user.role}`, user.role.replace('_', ' '));
 
   return (
     <>
-      <aside className="fixed left-0 top-0 h-screen w-64 bg-sidebar text-sidebar-foreground flex flex-col sidebar-glow z-50">
-        <div className="p-6 border-b border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-sidebar-accent flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-sidebar-primary" />
-            </div>
-            <div>
-              <h1 className="font-heading text-lg font-bold text-sidebar-primary">ExamPrep</h1>
-              <p className="text-xs text-sidebar-muted capitalize">{user.role.replace('_', ' ')}</p>
+      {/* Mobile Backdrop */}
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={cn(
+          "fixed left-0 top-0 h-screen w-64 bg-sidebar text-sidebar-foreground flex flex-col sidebar-glow z-50 border-r border-sidebar-border select-none transition-transform duration-300 ease-in-out",
+          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
+      >
+        {/* Brand Header */}
+        <div className="p-4 border-b border-sidebar-border shrink-0 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            {branding?.logoUrl ? (
+              <img
+                src={branding.logoUrl}
+                alt="School Logo"
+                className="w-10 h-10 rounded-xl object-contain bg-white/10 p-1 border border-sidebar-border shrink-0 shadow-sm"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-sidebar-accent flex items-center justify-center shrink-0 shadow-inner border border-sidebar-border/40">
+                <GraduationCap className="w-5 h-5 text-sidebar-primary" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <h1
+                className="font-heading text-base font-bold text-sidebar-foreground truncate tracking-tight leading-tight"
+                title={branding?.schoolName || t('system_name', 'ExamPrep Academy')}
+              >
+                {branding?.schoolName || t('system_name', 'ExamPrep Academy')}
+              </h1>
+              <p className="text-xs text-sidebar-muted capitalize truncate mt-0.5 font-medium">
+                {roleLabel}
+              </p>
             </div>
           </div>
+
+          {/* Close button for mobile screens */}
+          <button
+            onClick={onClose}
+            className="lg:hidden p-1.5 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+            aria-label="Close sidebar"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {items.map(item => {
-            const active = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+        {/* Navigation List */}
+        <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto no-scrollbar">
+          {items.map((item) => {
+            const active =
+              location.pathname === item.path ||
+              (item.path !== '/dashboard' && location.pathname.startsWith(item.path + '/'));
             return (
               <button
                 key={item.path}
-                onClick={() => navigate(item.path)}
+                onClick={() => {
+                  navigate(item.path);
+                  if (onClose) onClose();
+                }}
                 className={cn(
-                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                  'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group text-left',
                   active
-                    ? 'bg-sidebar-accent text-sidebar-primary'
+                    ? 'bg-sidebar-accent text-sidebar-primary shadow-sm font-semibold'
                     : 'text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
                 )}
               >
-                <item.icon className="w-4.5 h-4.5" />
-                {item.label}
+                <item.icon
+                  className={cn(
+                    'w-5 h-5 shrink-0 transition-transform duration-150 group-hover:scale-105',
+                    active ? 'text-sidebar-primary' : 'text-sidebar-muted group-hover:text-sidebar-foreground'
+                  )}
+                />
+                <span className="truncate">{t(item.key, item.label)}</span>
               </button>
             );
           })}
         </nav>
-
-        <div className="p-3 border-t border-sidebar-border space-y-2">
-          {/* User info */}
-          <div className="px-3 py-2.5 rounded-lg bg-sidebar-accent/30">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary font-bold text-xs uppercase">
-                {user.uid?.slice(0, 2) || 'U'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-sidebar-foreground truncate">{user.uid?.slice(0, 8)}…</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-sidebar-primary/15 text-sidebar-primary capitalize">
-                    {user.role.replace('_', ' ')}
-                  </span>
-                  {user.tid && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-sidebar-accent text-sidebar-muted truncate max-w-[80px]" title={user.tid}>
-                      <Building2 className="w-2.5 h-2.5 mr-0.5" />
-                      {user.tid.slice(0, 6)}…
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setPwOpen(true)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
-          >
-            <KeyRound className="w-4.5 h-4.5" />
-            Change Password
-          </button>
-          <button
-            onClick={toggle}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
-          >
-            {isDark ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
-            {isDark ? 'Light Mode' : 'Dark Mode'}
-          </button>
-          <button
-            onClick={logout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-destructive hover:bg-sidebar-accent/50 transition-all"
-          >
-            <LogOut className="w-4.5 h-4.5" />
-            Logout
-          </button>
-        </div>
       </aside>
-
-      {/* Change Password Dialog */}
-      <Dialog open={pwOpen} onOpenChange={setPwOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Change Password</DialogTitle></DialogHeader>
-          <div className="space-y-4 mt-2">
-            <div className="space-y-2">
-              <Label>Current Password</Label>
-              <Input type="password" value={oldPw} onChange={e => setOldPw(e.target.value)} placeholder="Enter current password" />
-            </div>
-            <div className="space-y-2">
-              <Label>New Password</Label>
-              <Input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="Enter new password" />
-            </div>
-            <Button onClick={handleChangePassword} disabled={changingPw} className="w-full">
-              {changingPw ? 'Changing...' : 'Change Password'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

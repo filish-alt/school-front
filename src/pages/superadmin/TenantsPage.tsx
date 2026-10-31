@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Trash2, Power, PowerOff, Building2, Phone, MapPin, Calendar, Eye, GraduationCap, UserCog, Users, Hash } from 'lucide-react';
+import { Edit, Trash2, Power, PowerOff, Building2, Phone, MapPin, Calendar, Eye, GraduationCap, UserCog, Users, Hash, Copy, Check, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
@@ -34,6 +34,24 @@ export default function TenantsPage() {
   const [form, setForm] = useState({ name: '', admin_username: '', address: '', phone: '' });
   const [saving, setSaving] = useState(false);
   const [credentials, setCredentials] = useState<{ admin_username: string; admin_password: string } | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopy = (text: string, field: string, label: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    toast.success(`${label} copied to clipboard!`);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const handleCopyAll = () => {
+    if (!credentials) return;
+    const text = `School Admin Login\nUsername: ${credentials.admin_username}\nPassword: ${credentials.admin_password}`;
+    navigator.clipboard.writeText(text);
+    setCopiedField('all');
+    toast.success('All credentials copied to clipboard!');
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   // Tenant detail state
   const [detailOpen, setDetailOpen] = useState(false);
@@ -333,14 +351,79 @@ export default function TenantsPage() {
 
       {/* Credentials Dialog */}
       <Dialog open={!!credentials} onOpenChange={() => setCredentials(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Admin Credentials</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground mb-4">Save these credentials. They won't be shown again.</p>
-          <div className="space-y-3 bg-accent/50 p-4 rounded-lg font-mono text-sm">
-            <div><span className="text-muted-foreground">Username:</span> {credentials?.admin_username}</div>
-            <div><span className="text-muted-foreground">Password:</span> {credentials?.admin_password}</div>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <Shield className="w-5 h-5 text-primary" /> School Admin Credentials
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground mb-1">
+            Please copy and save these credentials. They will not be displayed again.
+          </p>
+
+          <div className="space-y-3 bg-muted/50 p-4 rounded-xl font-mono text-sm border border-border/70">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground text-xs font-sans">Username:</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-foreground bg-background px-2 py-1 rounded border border-border/50 select-all">
+                  {credentials?.admin_username}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 shrink-0"
+                  onClick={() => handleCopy(credentials?.admin_username || '', 'admin_username', 'Username')}
+                  title="Copy Username"
+                >
+                  {copiedField === 'admin_username' ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-500" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground text-xs font-sans">Temporary Password:</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-primary bg-primary/10 px-2 py-1 rounded border border-primary/20 select-all">
+                  {credentials?.admin_password}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 shrink-0"
+                  onClick={() => handleCopy(credentials?.admin_password || '', 'admin_password', 'Password')}
+                  title="Copy Password"
+                >
+                  {copiedField === 'admin_password' ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-500" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
-          <Button onClick={() => setCredentials(null)} className="w-full mt-2">Done</Button>
+
+          <div className="flex flex-col sm:flex-row gap-2 mt-2">
+            <Button
+              variant="outline"
+              onClick={handleCopyAll}
+              className="flex-1 gap-2 border-primary/30 hover:bg-primary/5 text-xs font-semibold"
+            >
+              {copiedField === 'all' ? (
+                <Check className="w-4 h-4 text-emerald-500" />
+              ) : (
+                <Copy className="w-4 h-4 text-primary" />
+              )}
+              Copy All Credentials
+            </Button>
+            <Button onClick={() => setCredentials(null)} className="flex-1 text-xs">
+              Done
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

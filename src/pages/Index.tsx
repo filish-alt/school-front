@@ -1,21 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { GraduationCap, BookOpen, Users, Shield, ChevronRight, Sparkles, BarChart3, Clock, ArrowRight } from 'lucide-react';
+import { GraduationCap, BookOpen, Users, Shield, ChevronRight, Sparkles, BarChart3, Clock, ArrowRight, Globe, Calendar } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.5 } }),
 };
-
-const features = [
-  { icon: BookOpen, title: 'Smart Question Banks', desc: 'Organize questions by subject, difficulty, and type with bulk CSV import.' },
-  { icon: BarChart3, title: 'Real-time Analytics', desc: 'Track student performance with detailed insights and progress reports.' },
-  { icon: Shield, title: 'Role-Based Access', desc: 'Four distinct roles with granular permissions for complete institutional control.' },
-  { icon: Clock, title: 'Timed Examinations', desc: 'Auto-timed exams with shuffle options, instant grading, and session tracking.' },
-  { icon: Users, title: 'Multi-Tenant', desc: 'Manage multiple schools and institutions from a single super admin dashboard.' },
-  { icon: Sparkles, title: 'Modern Interface', desc: 'Beautiful dark/light mode with smooth animations and responsive design.' },
-];
 
 const floatingShapes = [
   { className: 'w-72 h-72 bg-primary/8 rounded-full blur-3xl', x: '10%', y: '15%', animY: [-30, 30], duration: 8 },
@@ -28,6 +20,25 @@ export default function LandingPage() {
   const { scrollYProgress } = useScroll();
   const heroY = useTransform(scrollYProgress, [0, 0.3], [0, -80]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.25], [1, 0]);
+  const { t, language, setLanguage, formatDate } = useLanguage();
+
+  const features = [
+    { icon: BookOpen, title: t('landing_feat_qb_title'), desc: t('landing_feat_qb_desc') },
+    { icon: BarChart3, title: t('landing_feat_analytics_title'), desc: t('landing_feat_analytics_desc') },
+    { icon: Shield, title: t('landing_feat_rbac_title'), desc: t('landing_feat_rbac_desc') },
+    { icon: Clock, title: t('landing_feat_timed_title'), desc: t('landing_feat_timed_desc') },
+    { icon: Users, title: t('landing_feat_tenant_title'), desc: t('landing_feat_tenant_desc') },
+    { icon: Sparkles, title: t('landing_feat_ui_title'), desc: t('landing_feat_ui_desc') },
+  ];
+
+  const roles = [
+    { role: t('role_super_admin'), desc: t('landing_role_super_admin_desc'), color: 'bg-primary' },
+    { role: t('role_school_admin'), desc: t('landing_role_school_admin_desc'), color: 'bg-secondary' },
+    { role: t('role_teacher'), desc: t('landing_role_teacher_desc'), color: 'bg-accent' },
+    { role: t('role_student'), desc: t('landing_role_student_desc'), color: 'bg-muted' },
+  ];
+
+  const currentDateDisplay = formatDate(new Date().toISOString());
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden">
@@ -36,22 +47,64 @@ export default function LandingPage() {
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="fixed top-0 w-full z-50 backdrop-blur-xl bg-background/80 border-b border-border"
+        className="fixed top-0 w-full z-50 backdrop-blur-xl bg-background/85 border-b border-border/70"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <motion.div
-              className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center"
+              className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-md shadow-primary/20"
               whileHover={{ rotate: 10, scale: 1.1 }}
               transition={{ type: 'spring', stiffness: 300 }}
             >
               <GraduationCap className="w-5 h-5 text-primary-foreground" />
             </motion.div>
-            <span className="text-xl font-bold tracking-tight">ExamPrep</span>
+            <div className="flex flex-col">
+              <span className="text-xl font-bold tracking-tight">ExamPrep</span>
+              <span className="text-[10px] text-muted-foreground font-medium -mt-1 hidden sm:block">
+                {language === 'am' ? 'የትምህርትና ፈተና ፖርታል' : 'Online Assessment Portal'}
+              </span>
+            </div>
           </div>
-          <Button onClick={() => navigate('/login')} size="sm">
-            Sign In <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
+
+          <div className="flex items-center gap-3">
+            {/* Live Ethiopian / Gregorian Date Badge */}
+            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/60 border border-border text-xs text-muted-foreground">
+              <Calendar className="w-3.5 h-3.5 text-primary" />
+              <span>{currentDateDisplay}</span>
+            </div>
+
+            {/* Language Switcher */}
+            <div className="flex items-center bg-muted/50 rounded-lg p-0.5 border border-border">
+              <button
+                type="button"
+                onClick={() => setLanguage('am')}
+                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 ${
+                  language === 'am'
+                    ? 'bg-primary text-primary-foreground shadow-sm font-semibold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span>🇪🇹</span>
+                <span>አማርኛ</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage('en')}
+                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 ${
+                  language === 'en'
+                    ? 'bg-primary text-primary-foreground shadow-sm font-semibold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span>🇬🇧</span>
+                <span>English</span>
+              </button>
+            </div>
+
+            <Button onClick={() => navigate('/login')} size="sm" className="shadow-sm">
+              {t('landing_sign_in')} <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
         </div>
       </motion.nav>
 
@@ -72,49 +125,48 @@ export default function LandingPage() {
 
         <motion.div style={{ y: heroY, opacity: heroOpacity }} className="max-w-5xl mx-auto text-center relative z-10">
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-8">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-8 border border-primary/20">
               <motion.span animate={{ rotate: [0, 20, 0] }} transition={{ duration: 2, repeat: Infinity }}>
                 <Sparkles className="w-4 h-4" />
               </motion.span>
-              Built for Modern Education
+              {t('landing_badge')}
             </span>
           </motion.div>
           <motion.h1
             initial="hidden" animate="visible" variants={fadeUp} custom={1}
-            className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] mb-6"
+            className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight leading-[1.15] mb-6"
           >
-            The Exam Platform
+            {t('landing_hero_title_1')}
             <br />
             <motion.span
               className="text-primary inline-block"
               animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
               transition={{ duration: 5, repeat: Infinity }}
             >
-              Schools Deserve
+              {t('landing_hero_title_2')}
             </motion.span>
           </motion.h1>
           <motion.p
             initial="hidden" animate="visible" variants={fadeUp} custom={2}
-            className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10"
+            className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed"
           >
-            Create, manage, and deliver exams with a powerful multi-tenant platform
-            designed for schools, universities, and training institutions.
+            {t('landing_hero_desc')}
           </motion.p>
           <motion.div
             initial="hidden" animate="visible" variants={fadeUp} custom={3}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
-              <Button size="lg" className="px-8 text-base group" onClick={() => navigate('/login')}>
-                Get Started
+              <Button size="lg" className="px-8 text-base group shadow-lg shadow-primary/20" onClick={() => navigate('/login')}>
+                {t('landing_get_started')}
                 <motion.span className="ml-1 inline-block" animate={{ x: [0, 4, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
                   <ArrowRight className="w-5 h-5" />
                 </motion.span>
               </Button>
             </motion.div>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
-              <Button size="lg" variant="outline" className="px-8 text-base" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
-                Explore Features
+              <Button size="lg" variant="outline" className="px-8 text-base border-border hover:bg-muted" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
+                {t('landing_explore_features')}
               </Button>
             </motion.div>
           </motion.div>
@@ -125,10 +177,10 @@ export default function LandingPage() {
       <section className="py-16 border-y border-border bg-muted/30">
         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 px-6 text-center">
           {[
-            { val: '10k+', label: 'Students' },
-            { val: '500+', label: 'Institutions' },
-            { val: '50k+', label: 'Exams Delivered' },
-            { val: '99.9%', label: 'Uptime' },
+            { val: '10,000+', label: t('landing_stats_students') },
+            { val: '500+', label: t('landing_stats_institutions') },
+            { val: '50,000+', label: t('landing_stats_exams') },
+            { val: '99.9%', label: t('landing_stats_uptime') },
           ].map((s, i) => (
             <motion.div
               key={s.label}
@@ -141,7 +193,7 @@ export default function LandingPage() {
               transition={{ type: 'spring', stiffness: 300 }}
             >
               <div className="text-3xl md:text-4xl font-bold text-primary">{s.val}</div>
-              <div className="text-sm text-muted-foreground mt-1">{s.label}</div>
+              <div className="text-sm font-medium text-muted-foreground mt-1">{s.label}</div>
             </motion.div>
           ))}
         </div>
@@ -151,8 +203,8 @@ export default function LandingPage() {
       <section id="features" className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0} className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything You Need</h2>
-            <p className="text-muted-foreground text-lg max-w-xl mx-auto">A complete exam management ecosystem from question creation to result analytics.</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">{t('landing_features_title')}</h2>
+            <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto">{t('landing_features_desc')}</p>
           </motion.div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((f, i) => (
@@ -185,16 +237,11 @@ export default function LandingPage() {
       <section className="py-24 px-6 bg-muted/30 border-y border-border">
         <div className="max-w-5xl mx-auto">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0} className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Designed for Every Role</h2>
-            <p className="text-muted-foreground text-lg">Tailored dashboards and workflows for every user in your institution.</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">{t('landing_roles_title')}</h2>
+            <p className="text-muted-foreground text-base sm:text-lg">{t('landing_roles_desc')}</p>
           </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { role: 'Super Admin', desc: 'Manage tenants, schools, and platform-wide students.', color: 'bg-primary' },
-              { role: 'School Admin', desc: 'Organize departments, sections, subjects, and teachers.', color: 'bg-secondary' },
-              { role: 'Teacher', desc: 'Build question banks, create and publish exams.', color: 'bg-accent' },
-              { role: 'Student', desc: 'Take exams, track results, and monitor progress.', color: 'bg-muted' },
-            ].map((r, i) => (
+            {roles.map((r, i) => (
               <motion.div
                 key={r.role}
                 initial="hidden"
@@ -214,7 +261,7 @@ export default function LandingPage() {
                   <Users className="w-7 h-7 text-foreground/70" />
                 </motion.div>
                 <h3 className="font-semibold text-lg mb-2">{r.role}</h3>
-                <p className="text-muted-foreground text-sm">{r.desc}</p>
+                <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">{r.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -242,11 +289,11 @@ export default function LandingPage() {
         </motion.div>
         <div className="max-w-3xl mx-auto text-center relative z-10">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Transform Exams?</h2>
-            <p className="text-muted-foreground text-lg mb-8">Join hundreds of institutions already using ExamPrep to streamline their examination process.</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">{t('landing_cta_title')}</h2>
+            <p className="text-muted-foreground text-base sm:text-lg mb-8">{t('landing_cta_desc')}</p>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
-              <Button size="lg" className="px-10 text-base" onClick={() => navigate('/login')}>
-                Start Now <ChevronRight className="w-5 h-5 ml-1" />
+              <Button size="lg" className="px-10 text-base shadow-lg shadow-primary/25" onClick={() => navigate('/login')}>
+                {t('landing_start_now')} <ChevronRight className="w-5 h-5 ml-1" />
               </Button>
             </motion.div>
           </motion.div>
@@ -254,13 +301,13 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8 px-6">
+      <footer className="border-t border-border py-8 px-6 bg-card/50">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <GraduationCap className="w-4 h-4" />
-            <span>ExamPrep © {new Date().getFullYear()}</span>
+            <GraduationCap className="w-4 h-4 text-primary" />
+            <span>ExamPrep © {currentDateDisplay.split(' ')[currentDateDisplay.split(' ').length - 1] || new Date().getFullYear()}</span>
           </div>
-          <span>Built for modern education</span>
+          <span className="text-xs sm:text-sm">{t('landing_footer_text')}</span>
         </div>
       </footer>
     </div>

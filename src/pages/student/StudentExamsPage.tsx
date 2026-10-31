@@ -160,51 +160,51 @@ export default function StudentExamsPage() {
     return (
       <div className="min-h-screen bg-background">
         {/* Immersive top bar */}
-        <div className="sticky top-0 z-50 bg-card/95 backdrop-blur-lg border-b border-border/50 px-4 py-3 shadow-sm">
-          <div className="max-w-5xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <ClipboardList className="w-4 h-4 text-primary" />
+        <div className="sticky top-0 z-50 bg-card/95 backdrop-blur-lg border-b border-border/50 px-3 sm:px-4 py-3 shadow-sm">
+          <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                 </div>
-                <Badge variant="outline" className="text-sm font-mono px-3">
-                  Question {currentIndex + 1} of {totalQuestions}
+                <Badge variant="outline" className="text-xs sm:text-sm font-mono px-2 sm:px-3 truncate">
+                  {currentIndex + 1} / {totalQuestions}
                 </Badge>
               </div>
               <div className="hidden sm:flex items-center gap-2">
-                <Progress value={progressPct} className="w-32 h-2.5" />
-                <span className="text-xs text-muted-foreground font-medium">{answeredCount}/{totalQuestions} answered</span>
+                <Progress value={progressPct} className="w-24 sm:w-32 h-2.5" />
+                <span className="text-xs text-muted-foreground font-medium">{answeredCount}/{totalQuestions}</span>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <motion.div 
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-mono font-bold transition-colors ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-mono font-bold transition-colors ${
                   isCritical ? 'bg-destructive text-destructive-foreground animate-pulse' :
                   isWarning ? 'bg-warning/15 text-warning' : 'bg-muted/10 text-foreground'
                 }`}
                 animate={isCritical ? { scale: [1, 1.05, 1] } : {}}
                 transition={{ repeat: Infinity, duration: 0.5 }}
               >
-                <Timer className="w-4 h-4" />
+                <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 {formatTime(timeLeft)}
               </motion.div>
-              <Button variant="destructive" size="sm" className="gap-1.5 shadow-sm" onClick={() => submitExam()} disabled={submitting || answeredCount < totalQuestions} title={answeredCount < totalQuestions ? `Answer all ${totalQuestions} questions first (${totalQuestions - answeredCount} left)` : 'Submit exam'}>
-                <Send className="w-3.5 h-3.5" /> {submitting ? 'Submitting...' : answeredCount < totalQuestions ? `${totalQuestions - answeredCount} left` : 'Submit'}
+              <Button variant="destructive" size="sm" className="gap-1 sm:gap-1.5 shadow-sm text-xs sm:text-sm px-2.5 sm:px-3" onClick={() => submitExam()} disabled={submitting || answeredCount < totalQuestions} title={answeredCount < totalQuestions ? `Answer all ${totalQuestions} questions first (${totalQuestions - answeredCount} left)` : 'Submit exam'}>
+                <Send className="w-3.5 h-3.5" /> <span>{submitting ? '...' : answeredCount < totalQuestions ? `${totalQuestions - answeredCount} left` : 'Submit'}</span>
               </Button>
             </div>
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto p-6">
-          <div className="grid grid-cols-12 gap-6">
-            {/* Question navigator - sticky sidebar */}
-            <div className="col-span-3">
-              <div className="glass-card rounded-2xl p-5 sticky top-24">
+        <div className="max-w-5xl mx-auto p-3.5 sm:p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Question navigator - responsive sidebar */}
+            <div className="col-span-1 lg:col-span-3 order-2 lg:order-1">
+              <div className="glass-card rounded-2xl p-4 sm:p-5 sticky top-20">
                 <div className="flex items-center gap-2 mb-4">
                   <Sparkles className="w-4 h-4 text-primary" />
                   <p className="text-sm font-semibold text-foreground">Navigator</p>
                 </div>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 sm:grid-cols-8 lg:grid-cols-5 gap-2">
                   {sessionQuestions.map((q: any, i: number) => {
                     const qId = q.question_id || q.id;
                     const isAnswered = !!answers[qId];
@@ -251,7 +251,7 @@ export default function StudentExamsPage() {
             </div>
 
             {/* Question content */}
-            <div className="col-span-9">
+            <div className="col-span-1 lg:col-span-9 order-1 lg:order-2">
               <AnimatePresence mode="wait">
                 {currentQ && (
                   <motion.div
@@ -260,12 +260,12 @@ export default function StudentExamsPage() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -30 }}
                     transition={{ duration: 0.25, ease: 'easeOut' }}
-                    className="glass-card rounded-2xl p-8"
+                    className="glass-card rounded-2xl p-4 sm:p-8"
                   >
                     {/* Question header */}
-                    <div className="flex items-start gap-4 mb-8">
+                    <div className="flex items-start gap-3 sm:gap-4 mb-6 sm:mb-8">
                       <motion.div 
-                        className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0"
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0"
                         initial={{ rotate: -10, scale: 0.9 }}
                         animate={{ rotate: 0, scale: 1 }}
                         transition={{ type: 'spring', stiffness: 300 }}

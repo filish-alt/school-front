@@ -19,12 +19,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { Eye, Send, ClipboardList, Clock, CheckCircle2, FileQuestion, Plus, Trash2, Shuffle, ListOrdered, BookOpen, Users, Award, Download, CalendarIcon, XCircle } from 'lucide-react';
+import { Eye, Send, ClipboardList, Clock, CheckCircle2, FileQuestion, Plus, Trash2, Shuffle, ListOrdered, BookOpen, Users, Award, Download, CalendarIcon, XCircle, ShieldAlert, Play, Sliders } from 'lucide-react';
 import { getSubjectEmoji } from '@/lib/subjectIcon';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import LiveExamControlsModal from './LiveExamControlsModal';
 
 function toLocalDatetimeString(isoOrLocal: string): string {
   if (!isoOrLocal) return '';
@@ -47,6 +49,10 @@ function localToISO(local: string): string {
 }
 
 export default function ExamsPage() {
+  const { user } = useAuth();
+  const isDeptHeadOrLeadership = ['super_admin', 'school_admin', 'school_director', 'vice_director', 'department_head'].includes(user?.role || '');
+  const isTeacherOnly = user?.role === 'teacher';
+
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -80,6 +86,15 @@ export default function ExamsPage() {
   const [marksOpen, setMarksOpen] = useState(false);
   const [marksData, setMarksData] = useState<any>(null);
   const [marksLoading, setMarksLoading] = useState(false);
+
+  // Live Supervision state
+  const [liveModalOpen, setLiveModalOpen] = useState(false);
+  const [selectedLiveExam, setSelectedLiveExam] = useState<any>(null);
+
+  const openLiveSupervision = (exam: any) => {
+    setSelectedLiveExam(exam);
+    setLiveModalOpen(true);
+  };
 
   useEffect(() => {
     api.getTeacherSubjects().then(setSubjects).catch(() => {});
@@ -128,14 +143,44 @@ export default function ExamsPage() {
     catch (e: any) { toast.error(e.message); }
   };
 
-  const publishExam = async (id: string) => {
-    try { await api.updateExamStatus(id, 'published'); toast.success('Exam published'); fetchData(); }
-    catch (e: any) { toast.error(e.message); }
+  const submitForApproval = async (id: string) => {
+    try {
+      await api.updateExamControls(id, { approval_status: 'under_review', status: 'under_review' });
+      toast.success('Exam submitted to Department Head for review & approval');
+      fetchData();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to submit exam for approval');
+    }
+  };
+
+  const approveAndPublish = async (id: string) => {
+    try {
+      await api.updateExamControls(id, { approval_status: 'approved', is_locked: true, status: 'published' });
+      toast.success('Exam approved and published for students');
+      fetchData();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to approve and publish exam');
+    }
+  };
+
+  const rejectExam = async (id: string) => {
+    try {
+      await api.updateExamControls(id, { approval_status: 'rejected', is_locked: false, status: 'draft' });
+      toast.warning('Exam returned to teacher for revisions');
+      fetchData();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to reject exam');
+    }
   };
 
   const unpublishExam = async (id: string) => {
-    try { await api.updateExamStatus(id, 'draft'); toast.success('Exam unpublished'); fetchData(); }
-    catch (e: any) { toast.error(e.message); }
+    try {
+      await api.updateExamControls(id, { approval_status: 'draft', is_locked: false, status: 'draft' });
+      toast.success('Exam unpublished');
+      fetchData();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   const openAddQuestions = (examId: string) => {
@@ -231,14 +276,25 @@ export default function ExamsPage() {
     return sectionMap.get(sid) || '';
   };
 
+  const renderStatusBadge = (status: string) => {
+    switch (status) {
+      case 'published':
+      case 'approved':
+        return <Badge className="bg-emerald-600 text-white gap-1"><CheckCircle2 className="w-3 h-3" /> Published</Badge>;
+      case 'under_review':
+        return <Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/30 gap-1"><Clock className="w-3 h-3" /> Under Review</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive" className="gap-1"><XCircle className="w-3 h-3" /> Revisions Needed</Badge>;
+      default:
+        return <Badge variant="secondary" className="gap-1"><Clock className="w-3 h-3" /> Draft</Badge>;
+    }
+  };
+
   const columns: Column<any>[] = [
     { key: 'title', label: 'Title' },
     { key: 'subject_id', label: 'Subject', render: (item) => getExamSubject(item) || '—' },
     { key: 'section_id', label: 'Section', render: (item) => getExamSection(item) || '—' },
-    { key: 'status', label: 'Status', render: (item) => {
-      const s = unwrapString(item.status);
-      return <Badge variant={s === 'published' ? 'default' : 'secondary'}>{s}</Badge>;
-    }},
+    { key: 'status', label: 'Status', render: (item) => renderStatusBadge(unwrapString(item.status)) },
     { key: 'duration_minutes', label: 'Duration', render: (item) => `${unwrapInt(item.duration_minutes)} min` },
     { key: 'total_marks', label: 'Marks', render: (item) => unwrapInt(item.total_marks) },
     { key: 'start_time', label: 'Start', render: (item) => { const t = unwrapTime(item.start_time); return t ? format(new Date(t), 'MMM d HH:mm') : '—'; } },
@@ -251,7 +307,16 @@ export default function ExamsPage() {
       </PageHeader>
       <SearchFilter
         search={search} onSearchChange={setSearch} placeholder="Search exams..."
-        filters={[{ label: 'Status', value: statusFilter, onChange: setStatusFilter, options: [{ label: 'Draft', value: 'draft' }, { label: 'Published', value: 'published' }] }]}
+        filters={[{
+          label: 'Status',
+          value: statusFilter,
+          onChange: setStatusFilter,
+          options: [
+            { label: 'Draft', value: 'draft' },
+            { label: 'Pending Approval', value: 'under_review' },
+            { label: 'Published', value: 'published' },
+          ],
+        }]}
       />
 
       {loading ? (
@@ -274,6 +339,9 @@ export default function ExamsPage() {
             const endT = unwrapTime(item.end_time);
             const subjectName = getExamSubject(item);
             const sectionName = getExamSection(item);
+            const isPublished = status === 'published' || status === 'approved';
+            const isUnderReview = status === 'under_review';
+            const isDraft = status === 'draft' || status === 'rejected' || !status;
             return (
               <motion.div
                 key={item.id}
@@ -281,15 +349,14 @@ export default function ExamsPage() {
                 whileHover={{ y: -4 }}
                 className="glass-card rounded-xl overflow-hidden group"
               >
-                <div className={`h-2 ${status === 'published' ? 'bg-success' : 'bg-warning'}`} />
+                <div className={`h-2 ${isPublished ? 'bg-success' : isUnderReview ? 'bg-amber-500' : 'bg-warning'}`} />
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-heading font-semibold text-foreground text-lg">{unwrapString(item.title)}</h3>
-                      <Badge variant={status === 'published' ? 'default' : 'secondary'} className="mt-1">
-                        {status === 'published' ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
-                        {status}
-                      </Badge>
+                      <div className="mt-1">
+                        {renderStatusBadge(status)}
+                      </div>
                     </div>
                     <div className="w-12 h-12 rounded-xl bg-secondary/15 flex items-center justify-center text-2xl">
                       {getSubjectEmoji(subjectName) || <FileQuestion className="w-6 h-6 text-secondary" />}
@@ -330,20 +397,50 @@ export default function ExamsPage() {
                   )}
 
                   <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border/50 flex-wrap">
-                    {status === 'draft' && (
-                      <Button variant="default" size="sm" className="gap-1.5 flex-1" onClick={() => publishExam(item.id)}>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                      onClick={() => openLiveSupervision(item)}
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5" /> Supervise
+                    </Button>
+
+                    {/* Teacher Workflow */}
+                    {isTeacherOnly && isDraft && (
+                      <Button variant="outline" size="sm" className="gap-1.5 text-primary border-primary/40 hover:bg-primary/10" onClick={() => submitForApproval(item.id)}>
+                        <Send className="w-3.5 h-3.5" /> Submit for Approval
+                      </Button>
+                    )}
+
+                    {/* Department Head & Leadership Workflow */}
+                    {isDeptHeadOrLeadership && isUnderReview && (
+                      <>
+                        <Button variant="default" size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => approveAndPublish(item.id)}>
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Approve & Publish
+                        </Button>
+                        <Button variant="outline" size="sm" className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => rejectExam(item.id)}>
+                          <XCircle className="w-3.5 h-3.5" /> Reject
+                        </Button>
+                      </>
+                    )}
+
+                    {isDeptHeadOrLeadership && isDraft && (
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => approveAndPublish(item.id)}>
                         <Send className="w-3.5 h-3.5" /> Publish
                       </Button>
                     )}
-                    {status === 'published' && (!endT || new Date(endT) > new Date()) && (
+
+                    {isPublished && (!endT || new Date(endT) > new Date()) && (
                       <Button variant="outline" size="sm" className="gap-1.5" onClick={() => unpublishExam(item.id)} title="Unpublish">
                         <XCircle className="w-3.5 h-3.5" /> Unpublish
                       </Button>
                     )}
+
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={() => openAddQuestions(item.id)}>
                       <Plus className="w-3.5 h-3.5" /> Questions
                     </Button>
-                    {status === 'published' && (
+                    {isPublished && (
                       <Button variant="outline" size="sm" className="gap-1.5" onClick={() => viewMarks(item.id)}>
                         <Award className="w-3.5 h-3.5" /> Marks
                       </Button>
@@ -362,14 +459,39 @@ export default function ExamsPage() {
           actions={(item) => {
             const status = unwrapString(item.status);
             const endT = unwrapTime(item.end_time);
-            const canUnpublish = status === 'published' && (!endT || new Date(endT) > new Date());
+            const isPublished = status === 'published' || status === 'approved';
+            const isUnderReview = status === 'under_review';
+            const isDraft = status === 'draft' || status === 'rejected' || !status;
+            const canUnpublish = isPublished && (!endT || new Date(endT) > new Date());
             return (
               <div className="flex items-center gap-1 justify-end">
-                {status === 'draft' && (
-                  <Button variant="ghost" size="icon" onClick={() => publishExam(item.id)} title="Publish"><Send className="w-4 h-4 text-primary" /></Button>
+                <Button variant="default" size="sm" className="h-8 gap-1 text-xs" onClick={() => openLiveSupervision(item)} title="Live Supervision & Controls">
+                  <ShieldAlert className="w-3.5 h-3.5" /> Supervise
+                </Button>
+                {isTeacherOnly && isDraft && (
+                  <Button variant="ghost" size="icon" onClick={() => submitForApproval(item.id)} title="Submit for Approval">
+                    <Send className="w-4 h-4 text-primary" />
+                  </Button>
+                )}
+                {isDeptHeadOrLeadership && isUnderReview && (
+                  <>
+                    <Button variant="ghost" size="icon" onClick={() => approveAndPublish(item.id)} title="Approve & Publish">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => rejectExam(item.id)} title="Reject">
+                      <XCircle className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </>
+                )}
+                {isDeptHeadOrLeadership && isDraft && (
+                  <Button variant="ghost" size="icon" onClick={() => approveAndPublish(item.id)} title="Publish">
+                    <Send className="w-4 h-4 text-primary" />
+                  </Button>
                 )}
                 {canUnpublish && (
-                  <Button variant="ghost" size="icon" onClick={() => unpublishExam(item.id)} title="Unpublish"><XCircle className="w-4 h-4 text-warning" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => unpublishExam(item.id)} title="Unpublish">
+                    <XCircle className="w-4 h-4 text-warning" />
+                  </Button>
                 )}
                 <Button variant="ghost" size="icon" onClick={() => openAddQuestions(item.id)} title="Add Questions"><Plus className="w-4 h-4" /></Button>
                 <Button variant="ghost" size="icon" onClick={() => viewDetail(item.id)}><Eye className="w-4 h-4" /></Button>
@@ -698,6 +820,14 @@ export default function ExamsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Live Exam Supervision & Controls Modal */}
+      <LiveExamControlsModal
+        open={liveModalOpen}
+        onOpenChange={setLiveModalOpen}
+        exam={selectedLiveExam}
+        onExamUpdated={fetchData}
+      />
     </AnimatedPage>
   );
 }

@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Edit, Trash2, Upload, HelpCircle, Star, Plus, CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, X } from 'lucide-react';
+import { Edit, Trash2, Upload, Download, HelpCircle, Star, Plus, CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -219,6 +219,25 @@ export default function QuestionsPage() {
     setDeleting(false);
   };
 
+  const downloadSampleCsv = () => {
+    const csvContent =
+      'question_text,option_a,option_b,option_c,option_d,correct_answer,marks\n' +
+      'What is the powerhouse of the cell?,Nucleus,Mitochondria,Ribosome,Golgi apparatus,B,1\n' +
+      'Which planet is known as the Red Planet?,Venus,Mars,Jupiter,Saturn,B,1\n' +
+      'What is the chemical symbol for Gold?,Au,Ag,Fe,Pb,A,2\n' +
+      'In computer science what does CPU stand for?,Central Processing Unit,Computer Personal Unit,Control Program Utility,Core Processor Unit,A,1\n' +
+      'Solve for x: 2x + 6 = 14,2,3,4,5,C,2\n';
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'sample_questions_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Sample questions CSV template downloaded');
+  };
+
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !bankId) return;
@@ -383,6 +402,10 @@ export default function QuestionsPage() {
           resetInlineOptions('mcq');
           setDialogOpen(true);
         }} addLabel="Add Question">
+        <Button variant="outline" onClick={downloadSampleCsv} className="gap-2">
+          <Download className="w-4 h-4 text-primary" />
+          Template
+        </Button>
         <label className="cursor-pointer">
           <input type="file" accept=".csv" className="hidden" onChange={handleImport} />
           <Button variant="outline" asChild><span className="gap-2 flex items-center"><Upload className="w-4 h-4" /> Import</span></Button>
